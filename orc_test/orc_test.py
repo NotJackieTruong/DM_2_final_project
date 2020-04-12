@@ -27,12 +27,12 @@ def set_image_dpi(file_path):
     print('x resize: ', im_resized.shape[1], ', y resize: ', im_resized.shape[0])
     
     # create new img file and write the im_resized to it
-    cv2.imwrite('D:\Third Year\Data mining II\DM_2_final_project\orc_test\images\image5.png', im_resized)
+    cv2.imwrite('images\image5.png', im_resized)
     cv2.imshow("resized: ", im_resized)
     cv2.waitKey(0)
     return im_resized
 
-rescaleImg = set_image_dpi('D:\Third Year\Data mining II\DM_2_final_project\orc_test\images\image4.png')
+rescaleImg = set_image_dpi('images\image4.png')
 
 # skew correction
 def skew_correction(image):
