@@ -6,33 +6,77 @@ from pytesseract import Output
 from matplotlib import pyplot as plt
 from PIL import Image
 import tempfile
-
+import imutils
 IMG_DIR = 'images/'
 #preprocess
+
 #scaling
 def set_image_dpi(file_path):
-    img = Image.open(file_path)
-    plt.figure(1)
-    plt.imshow(img)
-    plt.show()
-
-    length_x, width_y = img.size
-    factor = min(1, float(1024.0 / length_x))
-    size = int(factor * length_x), int(factor * width_y)
-    im_resized = img.resize(size, Image.ANTIALIAS)
-    temp_file = tempfile.NamedTemporaryFile(delete=False,   suffix='.png')
-    temp_filename = temp_file.name
-    im_resized.save(temp_filename, dpi=(300, 300))
+    # load an image
+    img = cv2.imread(file_path)
+    # get x, y of the image
+    length_y = img.shape[0]
+    length_x = img.shape[1]
+    print('x: ', length_x, ', y: ', length_y)
+    # formula to create factor 
+    factor = min(1, float(320.0/length_x))
+    size = int(factor * length_x), int(factor*length_y)
+    # resize the image
+    im_resized = cv2.resize(img, (size))
+    cv2.imshow("orign: ", img)
+    print('x resize: ', im_resized.shape[1], ', y resize: ', im_resized.shape[0])
     
+    # create new img file and write the im_resized to it
+    cv2.imwrite('D:\Third Year\Data mining II\DM_2_final_project\orc_test\images\image5.png', im_resized)
+    cv2.imshow("resized: ", im_resized)
+    cv2.waitKey(0)
+    return im_resized
 
-    plt.figure(2)
-    plt.imshow(im_resized)
-    plt.title("image resized:")
-    plt.show()
-    
-    return temp_filename
+rescaleImg = set_image_dpi('D:\Third Year\Data mining II\DM_2_final_project\orc_test\images\image4.png')
 
-rescaleImg = set_image_dpi('D:\Third Year\Data mining II\ORC Project\images\hand.jpeg')
+# skew correction
+def skew_correction(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bitwise_not(gray)
+    # threshold the image, setting all foreground pixels to
+    # 255 and all background pixels to 0
+    thresh = cv2.threshold(gray, 0, 255,
+        cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+    # grab the (x, y) coordinates of all pixel values that
+    # are greater than zero, then use these coordinates to
+    # compute a rotated bounding box that contains all
+    # coordinates
+    coords = np.column_stack(np.where(thresh > 0))
+    angle = cv2.minAreaRect(coords)[-1]
+    # the `cv2.minAreaRect` function returns values in the
+    # range [-90, 0); as the rectangle rotates clockwise the
+    # returned angle trends to 0 -- in this special case we
+    # need to add 90 degrees to the angle
+    if angle < -45:
+        angle = -(90 + angle)
+    # otherwise, just take the inverse of the angle to make
+    # it positive
+    else:
+        angle = -angle
+
+    # rotate the image to deskew it
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(image, M, (w, h),
+        flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    # draw the correction angle on the image so we can validate it
+    # cv2.putText(rotated, "Angle: {:.2f} degrees".format(angle),
+    #     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    # show the output image
+    print("[INFO] angle: {:.3f}".format(angle))
+    cv2.imshow("Input", image)
+    cv2.imshow("Rotated", rotated)
+    cv2.waitKey(0)
+    return rotated
+
+rotatedImg = skew_correction(rescaleImg)
 
 # get grayscale image
 def get_grayscale(image):
@@ -65,34 +109,17 @@ def opening(image):
 def canny(image):
     return cv2.Canny(image, 100, 200)
 
-#skew correction
-def deskew(image):
-    coords = np.column_stack(np.where(image > 0))
-    angle = cv2.minAreaRect(coords)[-1]
-    if angle < -45:
-        angle = -(90 + angle)
-    else:
-        angle = -angle
-    (h, w) = image.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    return rotated
-
 #template matching
 def match_template(image, template):
     return cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED) 
 
-# image = cv2.imread(IMG_DIR + 'image.png')
-
-image2 = cv2.imread(rescaleImg)
-b,g,r = cv2.split(image2)
+b,g,r = cv2.split(rotatedImg)
 rgb_img = cv2.merge([r,g,b])
 plt.imshow(rgb_img)
 plt.title('AUREBESH ORIGINAL IMAGE')
 plt.show()
 
-gray = get_grayscale(image2)
+gray = get_grayscale(rotatedImg)
 thresh = thresholding(gray)
 opening = opening(gray)
 canny = canny(gray)
@@ -118,16 +145,16 @@ custom_config = r'--oem 3 --psm 6'
 print('-----------------------------------------')
 print('TESSERACT OUTPUT --> ORIGINAL IMAGE')
 print('-----------------------------------------')
-print(pytesseract.image_to_string(image2, config=custom_config))
+print(pytesseract.image_to_string(rotatedImg, config=custom_config))
 print('\n-----------------------------------------')
 print('TESSERACT OUTPUT --> THRESHOLDED IMAGE')
 print('-----------------------------------------')
-print(pytesseract.image_to_string(image2, config=custom_config))
+print(pytesseract.image_to_string(rotatedImg, config=custom_config))
 print('\n-----------------------------------------')
 print('TESSERACT OUTPUT --> OPENED IMAGE')
 print('-----------------------------------------')
-print(pytesseract.image_to_string(image2, config=custom_config))
+print(pytesseract.image_to_string(rotatedImg, config=custom_config))
 print('\n-----------------------------------------')
 print('TESSERACT OUTPUT --> CANNY EDGE IMAGE')
 print('-----------------------------------------')
-print(pytesseract.image_to_string(image2, config=custom_config))
+print(pytesseract.image_to_string(rotatedImg, config=custom_config))
