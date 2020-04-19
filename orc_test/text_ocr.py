@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 from PIL import Image
 import tempfile
 import imutils
-IMG_DIR = 'images/'
 #preprocess
 
 #scaling
@@ -17,7 +16,7 @@ def set_image_dpi(file_path):
     # get x, y of the image
     length_y = img.shape[0]
     length_x = img.shape[1]
-    print('x: ', length_x, ', y: ', length_y)
+    print('x: ', length_x, ', y: ', length_y, ', shape: ')
     # formula to create factor 
     factor = min(1, float(320.0/length_x))
     size = int(factor * length_x), int(factor*length_y)
@@ -27,12 +26,12 @@ def set_image_dpi(file_path):
     print('x resize: ', im_resized.shape[1], ', y resize: ', im_resized.shape[0])
     
     # create new img file and write the im_resized to it
-    cv2.imwrite('images\image5.png', im_resized)
+    cv2.imwrite('text\image5.png', im_resized)
     cv2.imshow("resized: ", im_resized)
     cv2.waitKey(0)
     return im_resized
 
-rescaleImg = set_image_dpi('images\image4.png')
+rescaleImg = set_image_dpi('text\hand.jpeg')
 
 # skew correction
 def skew_correction(image):
