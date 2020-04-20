@@ -2,8 +2,14 @@ import cv2
 import imutils
 import numpy as np
 import glob
+import re
+import pytesseract
 
 cv_img = []
+total_img = 0
+right_img = 0
+custom_config = r'--oem 3 --psm 6'
+
 def detect_plate(img_path):
 
     # Param
@@ -59,14 +65,30 @@ def detect_plate(img_path):
         (bottomx, bottomy) = (np.max(x), np.max(y))
         Cropped = gray[topx:bottomx + 1, topy:bottomy + 1]
 
+        plate_detected = pytesseract.image_to_string(Cropped, config=custom_config)
+        plate_detected = re.sub('[^A-Za-z0-9]+', '', plate_detected)
+        return plate_detected
         # Display image
-        cv2.imshow('Input image', img)
-        cv2.imshow('License plate', Cropped)
+        # cv2.imshow('Input image', img)
+        # cv2.imshow('License plate', Cropped)
 
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
 for img in glob.glob("plate/*.jpg"):
+    img_name = ''
     n= cv2.imread(img,cv2.IMREAD_COLOR)
-    detect_plate(n)
-    print(img)
+    # plate detected by tesseract
+    plate_detected = detect_plate(n)
+
+    # name of the file
+    img_name = re.sub('[^A-Za-z0-9]+', '', img)
+    img_name = img_name.replace("plate", "")
+    img_name = img_name.replace("jpg", "")
+
+    total_img = total_img +1
+    if(img_name == plate_detected):
+        right_img = right_img + 1
+    
+   
+    print('img real name: ', img_name, ', img detected name: ', plate_detected, ', total numb of imgs: ', total_img, ', right img: ', right_img)
